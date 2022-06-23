@@ -62,6 +62,13 @@ service cloud.firestore {
       )
     }
 
+    function isRoomAdmin(roomId) {
+      let ROOM = getAfter(/databases/$(database)/documents/rooms/$(roomId)).data;
+      return ((uid() == ROOM.owner|| uid() in ROOM.admins)
+        && requestData().roomId == roomId
+      )
+    }
+
 
     match /users/{userId} {
       allow create: if
@@ -80,6 +87,7 @@ service cloud.firestore {
       allow get;
       allow list: if request.query.limit <= 50
     }
+
 
     match /rooms/{roomId} {
       function isRoom(room, roomId) {
@@ -115,15 +123,8 @@ service cloud.firestore {
       // Broadcast Data
 
       match /live/{docId} {
-        function isRoomAdmin() {
-          let ROOM = getAfter(/databases/$(database)/documents/rooms/$(roomId)).data;
-          return ((uid() == ROOM.owner|| uid() in ROOM.admins)
-            && requestData().roomId == roomId
-          )
-        }
-
         allow read;
-        allow create, update: if isRoomAdmin()
+        allow create, update: if isRoomAdmin(roomId)
       }
 
 
@@ -173,6 +174,31 @@ service cloud.firestore {
         }
 
       }
+    }
+
+    match /polls/{pollId} {
+      function isPoll(poll) {
+        return (
+          poll.id == pollId
+          && poll.roomId is string
+          && poll.roomId.size() > 0
+          && poll.title is string
+          && poll.title.size() > 0
+          && poll.description is string
+          && poll.img is string
+          && poll.forceClosed is bool
+          && poll.openDate is number
+          && poll.closeDate is number
+          && poll.items is map
+          && poll.items.size() > 1
+          && poll.votes is map
+        )
+      }
+
+      allow read;
+      allow write: if isRoomAdmin(request.resource.data.roomId)
+        && isPoll(request.resource.data)
+        && fields(["id", "roomId", "title", "description", "img", "forceClosed", "openDate", "closeDate", "items", "votes"], [])
     }
   }
 }

@@ -1,7 +1,4 @@
-import { FirestoreConverter, Snap } from "../types"
-import { User } from "interface/db"
+import type { User } from "interface/db"
+import { genericAdminFC } from "./generic.convert"
 1
-export const userAdminFC: FirestoreConverter<User> = {
-  fromFirestore: (snap: Snap<User>) => snap.data(),
-  toFirestore: (user) => user,
-}
+export const userAdminFC = genericAdminFC<User>()
